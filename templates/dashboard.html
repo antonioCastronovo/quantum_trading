@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Trading Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+    <!-- Intro Animata -->
+    <div id="intro" class="intro-section">
+        <div class="intro-content">
+            <h1 class="intro-title">Quantum Trading</h1>
+            <p class="intro-subtitle">Monitora il mercato in tempo reale</p>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="dashboard.html">Quantum Trading</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="dashboard.html">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="positions.html">Posizioni</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="market.html">Mercato</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="news.html">Notizie</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="macro.html">Macro</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid my-5">
+        <!-- Sezione Posizioni -->
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-lg">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="card-title">Posizioni Aperte</h5>
+                    </div>
+                    <div class="card-body" id="positions-container">
+                        <!-- Le posizioni verranno caricate qui dinamicamente -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grafici principali -->
+            <div class="col-md-8">
+                <div class="card shadow-lg mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="card-title">Performance</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="pnlChart"></div>
+                    </div>
+                </div>
+                
+                <div class="card shadow-lg">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="card-title">Dati di Mercato</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="marketChart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sezione Notizie e Dati Macro -->
+        <div class="row mt-4 g-4">
+            <!-- Forex Factory Events -->
+            <div class="col-lg-4">
+                <div class="card shadow-lg h-100">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="card-title">
+                            <i class="fas fa-calendar-alt me-2"></i>Eventi Forex Factory
+                        </h5>
+                    </div>
+                    <div class="card-body scrollable-container" style="max-height: 400px;" id="forex-events">
+                        <!-- Gli eventi Forex Factory verranno caricati qui dinamicamente -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bloomberg News -->
+            <div class="col-lg-4">
+                <div class="card shadow-lg h-100">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="card-title">
+                            <i class="fas fa-newspaper me-2"></i>Ultime Notizie
+                        </h5>
+                    </div>
+                    <div class="card-body scrollable-container" style="max-height: 400px;" id="bloomberg-news">
+                        <!-- Le notizie Bloomberg verranno caricate qui dinamicamente -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Macro Data -->
+            <div class="col-lg-4">
+                <div class="card shadow-lg h-100">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="card-title">
+                            <i class="fas fa-chart-line me-2"></i>Indicatori Macro
+                        </h5>
+                    </div>
+                    <div class="card-body" id="macro-data">
+                        <!-- Gli indicatori macro verranno caricati qui dinamicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white text-center py-3">
+        <p class="mb-0">&copy; 2023 Quantum Trading. Tutti i diritti riservati.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="filtri_dropdown.js"></script>
+    <script src="rendering_lato_client.js"></script>
+    <script src="scroll_optimizer.js"></script>
+    <script src="socket.js"></script>
+    <script src="timeout.js"></script>
+
+    <!-- Script per l'intro animata -->
+    <script>
+        // Nasconde l'intro dopo 3 secondi
+        setTimeout(() => {
+            document.getElementById('intro').style.display = 'none';
+        }, 3000);
+    </script>
+
+    <!-- Script per caricare i dati dal server -->
+    <script>
+        const serverUrl = 'http://localhost:5001';  // URL del server Flask
+
+        // Funzione per caricare le posizioni aperte
+        async function loadPositions() {
+            try {
+                const response = await fetch(`${serverUrl}/dashboard`);
+                const data = await response.json();
+                const positionsContainer = document.getElementById('positions-container');
+                positionsContainer.innerHTML = data.positions.map(pos => `
+                    <div class="alert alert-${pos.side === 'buy' ? 'success' : 'danger'} mb-2">
+                        <h6>${pos.symbol}</h6>
+                        <p class="mb-1">Quantità: ${pos.quantity.toFixed(4)}</p>
+                        <p class="mb-1">Prezzo: $${pos.entry_price.toFixed(2)}</p>
+                        <p class="mb-0">P&L: $${pos.unrealized_pnl.toFixed(2)}</p>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Errore nel caricamento delle posizioni:', error);
+            }
+        }
+
+        // Funzione per caricare le notizie Bloomberg
+        async function loadBloombergNews() {
+            try {
+                const response = await fetch(`${serverUrl}/market/news`);
+                const data = await response.json();
+                const newsContainer = document.getElementById('bloomberg-news');
+                newsContainer.innerHTML = data.bloomberg.map(item => `
+                    <a href="${item.url}" target="_blank" class="news-card">
+                        <div class="card news-item mb-3 hover-effect">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start">
+                                    <img src="${item.image || '/static/default-news.jpg'}" 
+                                         class="news-thumbnail me-3" alt="News thumbnail">
+                                    <div>
+                                        <h6 class="news-title">${item.title}</h6>
+                                        <p class="news-summary small text-muted">
+                                            ${item.summary.substring(0, 120)}...
+                                            <span class="read-more">Leggi tutto →</span>
+                                        </p>
+                                        <div class="news-meta small">
+                                            <span class="text-primary">${item.source}</span> • 
+                                            <span class="text-muted">${new Date(item.published).toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                `).join('');
+            } catch (error) {
+                console.error('Errore nel caricamento delle notizie:', error);
+            }
+        }
+
+        // Funzione per caricare gli eventi Forex Factory
+        async function loadForexEvents() {
+            try {
+                const response = await fetch(`${serverUrl}/market/forex-events`);
+                const data = await response.json();
+                const eventsContainer = document.getElementById('forex-events');
+                eventsContainer.innerHTML = data.map(event => `
+                    <div class="timeline-item ${event.impact === 'High' ? 'high-impact' : ''}">
+                        <div class="timeline-badge bg-${event.impact === 'High' ? 'danger' : 'secondary'}"></div>
+                        <div class="timeline-content">
+                            <small class="text-muted">${new Date(event.time).toLocaleString()}</small>
+                            <h6 class="mb-1">${event.event}</h6>
+                            <div class="d-flex justify-content-between small">
+                                <span class="badge bg-currency">${event.currency}</span>
+                                <div>
+                                    <span class="text-success">${event.actual}</span> 
+                                    <span class="text-muted">/ ${event.forecast}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Errore nel caricamento degli eventi Forex:', error);
+            }
+        }
+
+        // Funzione per caricare gli indicatori macro
+        async function loadMacroData() {
+            try {
+                const response = await fetch(`${serverUrl}/market/macro-data`);
+                const data = await response.json();
+                const macroContainer = document.getElementById('macro-data');
+                macroContainer.innerHTML = data.map(indicator => `
+                    <div class="macro-item" data-category="${indicator.category}">
+                        <div class="macro-header">
+                            <span class="macro-title">${indicator.name}</span>
+                            <span class="macro-value ${indicator.trend < 0 ? 'text-danger' : 'text-success'}">
+                                ${indicator.value}%
+                                <i class="fas fa-arrow-${indicator.trend > 0 ? 'up' : 'down'}"></i>
+                            </span>
+                        </div>
+                        <div class="progress" style="height: 4px;">
+                            <div class="progress-bar bg-${indicator.trend < 0 ? 'danger' : 'success'}" 
+                                 role="progressbar" 
+                                 style="width: ${Math.abs(indicator.trend)}%">
+                            </div>
+                        </div>
+                        <div class="macro-meta">
+                            <span class="text-muted small">${new Date(indicator.date).toLocaleDateString()}</span>
+                            <span class="badge bg-indicator">${indicator.country}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Errore nel caricamento degli indicatori macro:', error);
+            }
+        }
+
+        // Caricamento iniziale dei dati
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPositions();
+            loadBloombergNews();
+            loadForexEvents();
+            loadMacroData();
+        });
+    </script>
+</body>
+</html>

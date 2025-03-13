@@ -1,0 +1,6 @@
+{
+    "title": "Quantum Dashboard",
+    "panels": [
+      {"type": "graph", "title": "Trades"}
+    ]
+  }
